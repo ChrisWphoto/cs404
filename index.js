@@ -10,25 +10,71 @@
 const fs = require('fs')
 require('console.table')
 var usage = require('usage')
-const MAKE_IDX_START_AT_ZERO = 1
-var time1 = Date.now()
 
+// Globals
+var eMatrix = [] // Edge weights
+var fMatrix = [] // Source to destination flow
+const ADJ_IDX = 1
+var time1 = Date.now()
 var V = 0   // Number of vertices
 var source = 0
 var dest = 0
 
-function floydWarshall (dist) {
-  console.log('this is Graph')
-  console.table(dist)
-  let k, i, j
 
+// Start program
+readData('./input.txt', printMatrices)
+function printMatrices () {
+  console.log('Flow Matrix:')
+  console.table(fMatrix)
+  console.log('Edge Matrix:')
+  console.table(eMatrix)
+  floydWarshall(eMatrix)
+}
+
+
+
+// utility function for initializing 2d array
+function allocate2DArray (paths) {
+  let arr = []
+  for (let i = 0; i < V; i++) {
+    arr.push([])
+    for (let j = 0; j < V; j++) {
+      paths ? arr[i].push([]) : arr[i].push[0]
+    }
+  }
+  return arr
+}
+
+function initDistAndPath (graph, dist, path) {
+  for (let i = 0; i < V; i++) {
+    for (let j = 0; j < V; j++) {
+      dist[i][j] = graph[i][j]
+      if (graph[i][j] !== Infinity) {
+        path[i][j].push([i + ADJ_IDX])
+        if (i !== j) {
+          path[i][j].push([j + ADJ_IDX])
+        }
+      }
+    }
+  }
+}
+
+
+function floydWarshall (graph) {
+  let k, i, j
+  let dist = allocate2DArray()
+  let paths = allocate2DArray('push sub arrays')
+  initDistAndPath(graph, dist, paths)
+  console.log('paths:')
+  console.table(paths)
+  
   for (k = 0; k < V; k++) {
     for (i = 0; i < V; i++) {
       for (j = 0; j < V; j++) {
         if (i !== j) {
           if (dist[i][k] + dist[k][j] < dist[i][j]) {
             dist[i][j] = dist[i][k] + dist[k][j]
-            console.table(dist)
+            paths[i][j] = paths[i][k].slice(0, paths[i][k].length - 1).concat(paths[k][j])
           }
         }
       }
@@ -36,16 +82,11 @@ function floydWarshall (dist) {
   }
   console.log('All pairs shortest path: Min Weights:')
   console.table(dist)
-  // printResult(short, pathMatrix)
-  // console.log('Sneaky Matrix:')
-  // console.table(efMatrix)
-  // dijkstra(efMatrix, source)
+  console.table(paths)
 }
 
-var eMatrix = []
-var fMatrix = []
 
-function readData (inputFilePath, cb) {
+function readData (inputFilePath, printMatrices) {
   var data = fs.readFileSync(inputFilePath, {encoding: 'utf8'})
   // break input file into lines
   data = data.split('\n')
@@ -53,8 +94,8 @@ function readData (inputFilePath, cb) {
   // store dimmesions from first line.
   let dimensions = data[0].split(',')
   V = parseInt(dimensions[0])
-  source = parseInt(dimensions[1]) - MAKE_IDX_START_AT_ZERO
-  dest = parseInt(dimensions[2]) - MAKE_IDX_START_AT_ZERO
+  source = parseInt(dimensions[1]) - ADJ_IDX
+  dest = parseInt(dimensions[2]) - ADJ_IDX
   console.log(V, source, dest)
 
   // prep flow and edge matrices for reading
@@ -72,8 +113,8 @@ function readData (inputFilePath, cb) {
     if (line !== '') {
       line = line.split(',')
       let type = line[0]
-      let i = parseInt(line[1]) - MAKE_IDX_START_AT_ZERO
-      let j = parseInt(line[2]) - MAKE_IDX_START_AT_ZERO
+      let i = parseInt(line[1]) - ADJ_IDX
+      let j = parseInt(line[2]) - ADJ_IDX
       let weight = parseInt(line[3])
 
       switch (type) {
@@ -86,90 +127,9 @@ function readData (inputFilePath, cb) {
       }
     }
   })
-  cb()
+  printMatrices()
 }
 
-let printMatrices = () => {
-  console.log('Flow Matrix:')
-  console.table(fMatrix)
-
-  console.log('Edge Matrix:')
-  console.table(eMatrix)
-  floydWarshall(eMatrix)
-}
-
-function printResult (distance, pathMatrix) {
-  for (let i = 0; i < pathMatrix.length; i++) {
-    for (let j = 0; j < pathMatrix.length; j++) {
-      if (i !== j) {
-        let u = i + 1
-        let v = j + 1
-        let path = []
-        while (u !== v) {
-          u = pathMatrix[u - 1][v - 1]
-          path.push(u)
-        }
-        console.log(u)
-      }
-    }
-  }
-}
-
-function dijkstra (graph, start) {
-  // Path will hold vertices + edge weights in shortest path
-  let path = []
-  // vertex idx will be true if vertex is included in shortest path
-  let vIncluded = []
-  // hold weights of shortest paths
-  let shortWeights = []
-  for (let i = 0; i < V; i++) {
-    path.push(-1)
-    shortWeights.push(Infinity)
-    vIncluded.push(false)
-  }
-  shortWeights[start] = 0
-  for (let count = 0; count < V - 1; count++) {
-    // find next v with smallest number of cars
-    let i = minDistance(shortWeights, vIncluded)
-    // mark vertex as picked
-    vIncluded[i] = true
-    for (let j = 0; j < V; j++) {
-      if (!vIncluded[j] && graph[i][j] &&
-          shortWeights[i] + graph[i][j] < shortWeights[j]) {
-        path[j] = i
-        shortWeights[j] = shortWeights[i] + graph[i][j]
-      }
-    }
-  }
-  console.table(shortWeights)
-  console.log('Sneaky Paths delivered by dijkstra')
-  console.table(path)
-  printPath(path, source)
-  console.log(`Path from ${source + MAKE_IDX_START_AT_ZERO} to ${dest + MAKE_IDX_START_AT_ZERO}`, tempPath)
-}
-
-function minDistance (shortWeights, vIncluded) {
-  let min = Infinity
-  let minIdx
-  for (let i = 0; i < V; i++) {
-    if (vIncluded[i] === false && shortWeights[i] <= min) {
-      min = shortWeights[i]
-      minIdx = i
-    }
-  }
-  return minIdx
-}
-var tempPath = []
-function printPath (path, idx) {
-  if (path[idx] === -1) {
-    tempPath = []
-    return
-  }
-  printPath(path, path[idx])
-  tempPath.push(idx + MAKE_IDX_START_AT_ZERO)
-}
-
-readData('./input.txt', printMatrices)
 
 // report cpu mem usage
 var pid = process.pid
