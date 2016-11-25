@@ -14,6 +14,7 @@ var usage = require('usage')
 // Globals
 var eMatrix = [] // Edge weights
 var fMatrix = [] // Source to destination flow
+var efMatrix = [] // Hop to hop flow
 const ADJ_IDX = 1
 var time1 = Date.now()
 var V = 0   // Number of vertices
@@ -22,13 +23,15 @@ var dest = 0
 
 
 // Start program
-readData('./input.txt', printMatrices)
+readData('./input.txt')
+printMatrices()
+let distAndPaths = floydWarshall(eMatrix)
+let edgeTraffic = generateHopToHopFlow(distAndPaths[1])
+console.table('sneaky flow', edgeTraffic)
+let sneakyDistAndPaths = floydWarshall(edgeTraffic)
 function printMatrices () {
-  console.log('Flow Matrix:')
-  console.table(fMatrix)
-  console.log('Edge Matrix:')
-  console.table(eMatrix)
-  floydWarshall(eMatrix)
+  console.table('Edge Matrix:', eMatrix)
+  console.table('Flow Matrix:', fMatrix)
 }
 
 
@@ -39,7 +42,7 @@ function allocate2DArray (paths) {
   for (let i = 0; i < V; i++) {
     arr.push([])
     for (let j = 0; j < V; j++) {
-      paths ? arr[i].push([]) : arr[i].push[0]
+      paths ? arr[i].push([]) : arr[i].push(0)
     }
   }
   return arr
@@ -50,9 +53,9 @@ function initDistAndPath (graph, dist, path) {
     for (let j = 0; j < V; j++) {
       dist[i][j] = graph[i][j]
       if (graph[i][j] !== Infinity) {
-        path[i][j].push([i + ADJ_IDX])
+        path[i][j].push([i])
         if (i !== j) {
-          path[i][j].push([j + ADJ_IDX])
+          path[i][j].push([j])
         }
       }
     }
@@ -65,9 +68,6 @@ function floydWarshall (graph) {
   let dist = allocate2DArray()
   let paths = allocate2DArray('push sub arrays')
   initDistAndPath(graph, dist, paths)
-  console.log('paths:')
-  console.table(paths)
-  
   for (k = 0; k < V; k++) {
     for (i = 0; i < V; i++) {
       for (j = 0; j < V; j++) {
@@ -80,9 +80,35 @@ function floydWarshall (graph) {
       }
     }
   }
-  console.log('All pairs shortest path: Min Weights:')
-  console.table(dist)
-  console.table(paths)
+  console.table('All pairs shortest path: Min Weights:', dist)
+  console.table('All pairs shortest path: Path:', paths)
+  return [dist, paths]
+}
+
+function generateHopToHopFlow (paths) {
+  let sneaky = allocate2DArray()
+  for (let i = 0; i < V; i++) {
+    for (let j = 0; j < V; j++) {
+      if (eMatrix[i][j] === Infinity) {
+        sneaky[i][j] = Infinity
+      }
+    }
+  }
+
+  for (let i = 0; i < V; i++) {
+    for (let j = 0; j < V; j++) {
+      let len = paths[i][j].length - 1
+      let tempPath = paths[i][j]
+      for (let k = 0; k < len; k++) {
+        let startHop = tempPath[k]
+        let endHop = tempPath[k + 1]
+        if (startHop !== endHop) {
+          sneaky[startHop][endHop] += fMatrix[i][j]
+        }
+      }
+    }
+  }
+  return sneaky
 }
 
 
@@ -127,7 +153,7 @@ function readData (inputFilePath, printMatrices) {
       }
     }
   })
-  printMatrices()
+  // printMatrices()
 }
 
 
