@@ -14,7 +14,6 @@ var usage = require('usage')
 // Globals
 var eMatrix = [] // Edge weights
 var fMatrix = [] // Source to destination flow
-var efMatrix = [] // Hop to hop flow
 const ADJ_IDX = 1
 var time1 = Date.now()
 var V = 0   // Number of vertices
@@ -27,8 +26,10 @@ readData('./input.txt')
 printMatrices()
 let distAndPaths = floydWarshall(eMatrix)
 let edgeTraffic = generateHopToHopFlow(distAndPaths[1])
-console.table('sneaky flow', edgeTraffic)
+console.table('Edge Traffic', edgeTraffic)
 let sneakyDistAndPaths = floydWarshall(edgeTraffic)
+let highestAndLowest = highestLowestAvgWeight(edgeTraffic, sneakyDistAndPaths[1], source, dest)
+console.log(`Highest weight Edge: ${highestAndLowest[0]} \nLowest Weight Edge: ${highestAndLowest[1]} \nAvg Weight on Path ${highestAndLowest[2]}`)
 function printMatrices () {
   console.table('Edge Matrix:', eMatrix)
   console.table('Flow Matrix:', fMatrix)
@@ -87,6 +88,7 @@ function floydWarshall (graph) {
 
 function generateHopToHopFlow (paths) {
   let sneaky = allocate2DArray()
+  // add infinity to edges that do not connect
   for (let i = 0; i < V; i++) {
     for (let j = 0; j < V; j++) {
       if (eMatrix[i][j] === Infinity) {
@@ -109,6 +111,24 @@ function generateHopToHopFlow (paths) {
     }
   }
   return sneaky
+}
+
+function highestLowestAvgWeight(edgeTraffic, paths, i, j) {
+  let high = 0
+  let low = Infinity
+  let avg = 0
+  let len = paths[i][j].length - 1
+  let tempPath = paths[i][j]
+  for (let k = 0; k < len; k++) {
+    let startHop = tempPath[k]
+    let endHop = tempPath[k + 1]
+    let edgeW = edgeTraffic[startHop][endHop]
+    edgeW > high ? high = edgeW : null
+    edgeW < low ? low = edgeW : null
+    avg += edgeW
+  }
+  avg = Math.round((avg / len) * 100) / 100 // round to 2 decimal places
+  return [high, low, avg]
 }
 
 
